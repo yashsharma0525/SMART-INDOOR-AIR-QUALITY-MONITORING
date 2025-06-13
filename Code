@@ -1,0 +1,124 @@
+# PROGRAM
+#include <Wire.h>
+#include <Adafruit_SGP30.h>
+#include <DHT.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_SSD1306.h>
+
+// Define pins for LED, buzzer, and OLED display
+#define LED_PIN 5
+#define BUZZER_PIN 12
+#define OLED_RESET -1 // Use Arduino reset pin
+
+// Define sensor pins and types
+#define DHTPIN 4     // Digital pin connected to the DHT sensor
+#define DHTTYPE DHT11   // DHT 11
+
+// Create sensor objects
+Adafruit_SGP30 sgp;
+DHT dht(DHTPIN, DHTTYPE);
+
+// Create OLED display object
+Adafruit_SSD1306 display(128, 32, &Wire, OLED_RESET);
+
+// ThingsBoard credentials (replace with your own)
+const char* ssid = "Galaxy M0201fb";
+const char* password = "00000000";
+const char* mqtt_server = "demo.thingsboard.io";
+const char* device_token = "2HQvLlog5C0lPnJTtrtj";
+
+// Function to initialize the sensors, WiFi, and OLED display
+void setup() {
+  // Initialize serial communication for debugging
+  Serial.begin(9600);
+
+  // Initialize sensors
+  if (!sgp.begin()) {
+    Serial.println("Failed to initialize SGP30 sensor!");
+    while (1); // Break out if the sensor isn't found
+  }
+  dht.begin();
+
+  // Initialize OLED display
+  display.begin(SSD1306_SWITCHCAPVCC, 0x3C);
+  display.clearDisplay();
+  display.setTextSize(1);
+  display.setTextColor(WHITE);
+
+  // Initialize WiFi and MQTT client (implementation depends on your WiFi library)
+  // ...
+
+  // Set LED and buzzer pins as output
+  pinMode(LED_PIN, OUTPUT);
+  pinMode(BUZZER_PIN, OUTPUT);
+}
+
+// Function to read sensor data and send to ThingsBoard and display on OLED
+void loop() {
+  // Read sensor data
+  int eco2 = sgp.eCO2;
+  int tvoc = sgp.TVOC;
+  float h = dht.readHumidity();
+  float t = dht.readTemperature();
+
+  // Print sensor data to serial monitor for debugging
+  Serial.print("eCO2: ");
+  Serial.print(eco2);
+  Serial.print(" ppm\t");
+  Serial.print("TVOC: ");
+  Serial.print(tvoc);
+  Serial.print(" ppb\t");
+  Serial.print("Humidity: ");
+  Serial.print(h);
+  Serial.print(" %\t");
+  Serial.print("Temperature: ");
+  Serial.print(t);
+  Serial.println(" *C");
+
+  // Display sensor data on OLED
+  display.clearDisplay();
+  display.setCursor(0, 0);
+  display.print("eCO2: ");
+  display.print(eco2);
+  display.print(" ppm");
+  display.setCursor(0, 10);
+  display.print("TVOC: ");
+  display.print(tvoc);
+  display.print(" ppb");
+  display.setCursor(0, 20);
+  display.print("Humidity: ");
+  display.print(h);
+  display.print(" %");
+  display.setCursor(0, 30);
+  display.print("Temperature: ");
+  display.print(t);
+  display.print(" C");
+  display.display();
+
+  // Send data to ThingsBoard using MQTT (implementation depends on your MQTT library)
+  // ...
+
+  // Control LED and buzzer based on air quality (adjust thresholds as needed)
+  if (eco2 > 1000 || tvoc > 100) {
+    // Turn on LED and sound buzzer
+    digitalWrite(LED_PIN, HIGH);
+    tone(BUZZER_PIN, 1000);
+  } else {
+    // Turn off LED and stop buzzer
+    digitalWrite(LED_PIN, LOW);
+    noTone(BUZZER_PIN);
+  }
+
+  delay(1000);
+}
+
+int main() {
+  setup();
+
+  while (1) {
+    loop();
+  }
+
+  return 0;
+}
+
